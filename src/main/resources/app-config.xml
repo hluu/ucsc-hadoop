@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+
+<configuration>
+	<property>
+		<name>minCount</name>
+		<value>888</value>
+	</property>
+</configuration>

@@ -21,28 +21,29 @@ import ucsc.hadoop.mapreduce.util.ConfigurationUtil;
 
 
 /**
- * Simple MapReduce application to count how many movies per year
+ * Simple MapReduce application to count how many movies per year and only output years with
+ * a configuration # of movies
  * 
  * @author hluu
  *
  */
-public class MovieCount extends Configured implements Tool {
+public class MovieCountWithLimit extends Configured implements Tool {
 	
 	private static final Log LOG = LogFactory.getLog(MovieCount.class);
 	
 	public int run(String[] args) throws Exception {
 		Configuration conf = getConf();
+		ConfigurationUtil.dumpConfigurations(conf, System.out);
+
 		if (args.length != 2) {
 			System.err.println("Usage: moviecount <in> <out>");
 			System.exit(2);
 		}
 		
-		ConfigurationUtil.dumpConfigurations(conf, System.out);
-		
 		LOG.info("input: " + args[0] + " output: " + args[1]);
 		
 		Job job = new Job(conf, "movie count");
-		job.setJarByClass(MovieCount.class);
+		job.setJarByClass(MovieCountWithLimit.class);
 		job.setMapperClass(MovieTokenizerMapper.class);
 		job.setReducerClass(MovieYearReducer.class);
 
@@ -57,7 +58,7 @@ public class MovieCount extends Configured implements Tool {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		int exitCode = ToolRunner.run(new MovieCount(), args);
+		int exitCode = ToolRunner.run(new MovieCountWithLimit(), args);
 		System.exit(exitCode);
 	}
 	
@@ -80,7 +81,17 @@ public class MovieCount extends Configured implements Tool {
 	}
 	
 	public static class MovieYearReducer extends Reducer<IntWritable, IntWritable, IntWritable, IntWritable> {
+		private static final Log LOG = LogFactory.getLog(MovieYearReducer.class);
+		
 		private IntWritable result = new IntWritable();
+		
+		private int minCount;
+		
+		@Override 
+	    protected void setup(Context context) throws IOException, InterruptedException {
+	    	minCount = context.getConfiguration().getInt("minCount", 5);
+	    	LOG.info("---- minCount: " + minCount);
+	    }
 		
 		@Override
 		public void reduce(IntWritable year, Iterable<IntWritable> values, Context context) 
@@ -90,9 +101,11 @@ public class MovieCount extends Configured implements Tool {
 			for (IntWritable cnt : values) {
 				totalCnt += cnt.get();
 			}
-			
-			result.set(totalCnt);
-			context.write(year, result);
+
+			if (totalCnt >= minCount) {
+				result.set(totalCnt);
+				context.write(year, result);
+			}
 		}
 	}
 	
