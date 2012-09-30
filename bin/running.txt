@@ -1,17 +1,38 @@
-# movie count
+
+# ************ movie count **************
 ./bin/rmMovieOutput.sh
 hadoop ucsc.hadoop.mapreduce.movie.MovieCount ./data/movie ~/tmp/hadoop/output/movie
 
-# movie count with combiner
+# ********* movie count with limit (using configuration) ***********
+# first run w/o specifying configuration
+./bin/rmActorCountOutput.sh
+hadoop ucsc.hadoop.mapreduce.movie.MovieCountWithLimit ./data/movie ~/tmp/hadoop/output/movie
+
+./bin/rmActorCountOutput.sh
+hadoop ucsc.hadoop.mapreduce.movie.MovieCountWithLimit -D minCount=20 ./data/movie ~/tmp/hadoop/output/movie
+
+# *********** movie count with counter *************
+./bin/rmActorCountOutput.sh
+hadoop ucsc.hadoop.mapreduce.movie.MovieCountWithCounter ./data/movie ~/tmp/hadoop/output/movie
+
+# *********** movie count with combiner *************
 # running w/o combiner
 ./bin/rmActorCountOutput.sh
 
 hadoop ucsc.hadoop.mapreduce.movie.MovieCountWithCombiner ./data/movie ~/tmp/hadoop/output/actor-count
 
-# running w/o combiner
+# running with combiner
 hadoop ucsc.hadoop.mapreduce.movie.MovieCountWithCombiner -D useCombiner=true ./data/movie ~/tmp/hadoop/output/actor-count
 
-# running with combiner
+
+# *********** sort movies by year  *************
+rm -rf ~/tmp/hadoop/output/movie-sort/
+hadoop ucsc.hadoop.mapreduce.movie.MovieSort ./data/movie-weights ~/tmp/hadoop/output/movie-sort
+more ~/tmp/hadoop/output/movie-sort/part-r-00000 
+
+# *********** search  *************
+./bin/rmSearchOutput.sh
+hadoop ucsc.hadoop.mapreduce.text.Search ./data/big-data-papers ~/tmp/hadoop/output/search google
 
 # display output
 more ~/tmp/hadoop/output/movie/part-r-00000

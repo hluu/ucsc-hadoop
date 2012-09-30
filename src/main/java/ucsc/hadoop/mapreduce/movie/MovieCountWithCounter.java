@@ -1,6 +1,8 @@
 package ucsc.hadoop.mapreduce.movie;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -14,6 +16,7 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
@@ -49,6 +52,9 @@ public class MovieCountWithCounter extends Configured implements Tool {
 		job.setMapperClass(MovieTokenizerMapper.class);
 		job.setReducerClass(MovieYearReducer.class);
 
+		job.setMapOutputKeyClass(IntWritable.class);
+		job.setMapOutputValueClass(Text.class);
+		
 		job.setOutputKeyClass(IntWritable.class);
 		job.setOutputValueClass(IntWritable.class);
 		
@@ -81,8 +87,8 @@ public class MovieCountWithCounter extends Configured implements Tool {
 		System.exit(exitCode);
 	}
 	
-	public static class MovieTokenizerMapper extends Mapper<Object, Text, IntWritable, IntWritable> {
-		private final static IntWritable ONE = new IntWritable(1);
+	public static class MovieTokenizerMapper extends Mapper<Object, Text, IntWritable, Text> {
+		private final static Text MOVIE = new Text();
 		private final static IntWritable YEAR = new IntWritable();
 		
 		public enum Movie {
@@ -97,7 +103,8 @@ public class MovieCountWithCounter extends Configured implements Tool {
 			if (tokens.length == 3) {
 				int year = Integer.parseInt(tokens[2]);
 				YEAR.set(year);
-				context.write(YEAR, ONE);
+				MOVIE.set(tokens[1]);
+				context.write(YEAR, MOVIE);
 			} else {
 				context.getCounter(Movie.BAD_RECORD).increment(1);
 			}
@@ -105,20 +112,20 @@ public class MovieCountWithCounter extends Configured implements Tool {
 		}
 	}
 	
-	public static class MovieYearReducer extends Reducer<IntWritable, IntWritable, IntWritable, IntWritable> {
+	public static class MovieYearReducer extends Reducer<IntWritable, Text, IntWritable, IntWritable> {
 		private IntWritable result = new IntWritable();
 		
 		@Override
-		public void reduce(IntWritable year, Iterable<IntWritable> values, Context context) 
+		public void reduce(IntWritable year, Iterable<Text> values, Context context) 
 				 throws IOException, InterruptedException {
 				
-			int totalCnt = 0;
-			for (IntWritable cnt : values) {
-				totalCnt += cnt.get();
+			Set<String> movieSet = new HashSet<String>();
+			for (Text movie : values) {
+				movieSet.add(movie.toString());
 			}
-			
-			result.set(totalCnt);
+			result.set(movieSet.size());
 			context.write(year, result);
+			movieSet.clear();
 		}
 	}
 	

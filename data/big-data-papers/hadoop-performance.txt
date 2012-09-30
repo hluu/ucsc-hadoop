@@ -1,0 +1,749 @@
+Hadoop Performance Models
+Herodotos Herodotou
+hero@cs.duke.edu
+Technical Report, CS-2011-05
+Computer Science Department
+Duke University
+Abstract
+Hadoop MapReduce is now a popular choice for performing large-scale data analytics. This
+technical report describes a detailed set of mathematical performance models for describing the
+execution of a MapReduce job on Hadoop. The models describe data
+ow and cost information
+at the ne granularity of phases within the map and reduce tasks of a job execution. The
+models can be used to estimate the performance of MapReduce jobs as well as to nd the
+optimal conguration settings to use when running the jobs.
+1 Introduction
+MapReduce is a relatively young framework|both a programming model and an associated run-
+time system|for large-scale data processing. Hadoop is the most popular open-source implementa-
+tion of a MapReduce framework that follows the design laid out in the original paper. A combina-
+tion of features contributes to Hadoop's increasing popularity, including fault tolerance, data-local
+scheduling, ability to operate in a heterogeneous environment, handling of straggler tasks, as well
+as a modular and customizable architecture.
+The MapReduce programming model consists of a map(k1; v1) function and a reduce(k2; list(v2))
+function. Users can implement their own processing logic by specifying a customized map() and
+reduce() function written in a general-purpose language like Java or Python. The map(k1; v1)
+function is invoked for every key-value pair hk1; v1i in the input data to output zero or more
+key-value pairs of the form hk2; v2i (see Figure 1). The reduce(k2; list(v2)) function is invoked
+for every unique key k2 and corresponding values list(v2) in the map output. reduce(k2; list(v2))
+outputs zero or more key-value pairs of the form hk3; v3i. The MapReduce programming model
+also allows other functions such as (i) partition(k2), for controlling how the map output key-value
+pairs are partitioned among the reduce tasks, and (ii) combine(k2; list(v2)), for performing partial
+aggregation on the map side. The keys k1, k2, and k3 as well as the values v1, v2, and v3 can be of
+dierent and arbitrary types.
+A Hadoop MapReduce cluster employs a master-slave architecture where one master node
+(called JobTracker) manages a number of slave nodes (called TaskTrackers). Figure 1 shows how
+a MapReduce job is executed on the cluster. Hadoop launches a MapReduce job by rst splitting
+(logically) the input dataset into data splits. Each data split is then scheduled to one TaskTracker
+node and is processed by a map task. A Task Scheduler is responsible for scheduling the execution
+1
+Figure 1: Execution of a MapReduce job.
+of map tasks while taking data locality into account. Each TaskTracker has a predened number
+of task execution slots for running map (reduce) tasks. If the job will execute more map (reduce)
+tasks than there are slots, then the map (reduce) tasks will run in multiple waves. When map tasks
+complete, the run-time system groups all intermediate key-value pairs using an external sort-merge
+algorithm. The intermediate data is then shued (i.e., transferred) to the TaskTrackers scheduled
+to run the reduce tasks. Finally, the reduce tasks will process the intermediate data to produce the
+results of the job.
+As illustrated in Figure 2, the Map task execution is divided into ve phases:
+1. Read: Reading the input split from HDFS and creating the input key-value pairs (records).
+2. Map: Executing the user-dened map function to generate the map-output data.
+3. Collect: Partitioning and collecting the intermediate (map-output) data into a buer before
+spilling.
+4. Spill: Sorting, using the combine function if any, performing compression if specied, and
+nally writing to local disk to create le spills.
+5. Merge: Merging the le spills into a single map output le. Merging might be performed in
+multiple rounds.
+As illustrated in Figure 3, the Reduce Task is divided into four phases:
+1. Shue: Transferring the intermediate data from the mapper nodes to a reducer's node and
+decompressing if needed. Partial merging may also occur during this phase.
+2. Merge: Merging the sorted fragments from the dierent mappers to form the input to the
+reduce function.
+3. Reduce: Executing the user-dened reduce function to produce the nal output data.
+2
+Figure 2: Execution of a map task showing the
+map-side phases.
+Figure 3: Execution of a reduce task showing
+the reduce-side phases.
+4. Write: Compressing, if specied, and writing the nal output to HDFS.
+We model all task phases in order to accurately model the execution of a MapReduce job. We
+represent the execution of an arbitrary MapReduce job using a job prole, which is a concise
+statistical summary of MapReduce job execution. A job prole consists of data
+ow and cost
+estimates for a MapReduce job j: data
+ow estimates represent information regarding the number
+of bytes and key-value pairs processed during j's execution, while cost estimates represent resource
+usage and execution time.
+For a map task, we model the Read and Map phases in Section 3, the Collect and Spill phases
+in Section 4, and the Merge phase in Section 5. For a reduce task, we model the Shue phase in
+Section 6, the Merge phase in Section 7, and the Reduce and Write phases in Section 8.
+2 Preliminaries
+The performance models calculate the data
+ow and cost elds in a prole:
+ Data
+ow elds capture information about the amount of data, both in terms of bytes as well
+as records (key-value pairs), 
+owing through the dierent tasks and phases of a MapReduce
+job execution. Table 1 lists all the data
+ow elds.
+ Cost elds capture information about execution time at the level of tasks and phases within
+the tasks for a MapReduce job execution. Table 2 lists all the cost elds.
+The inputs required by the models are estimated data
+ow statistics elds, estimated cost statistics
+elds, as well as cluster-wide and job-level conguration parameter settings:
+ Data
+ow Statistics elds capture statistical information about the data
+ow that is expected
+to remain unchanged across dierent executions of the MapReduce job unless the data dis-
+tribution in the input dataset changes signicantly across these executions. Table 3 lists all
+the data
+ow statistics elds.
+3
+Table 1: Data
+ow elds in the job prole. d, r, and c denote respectively input data properties,
+cluster resource properties, and conguration parameter settings.
+Abbreviation Prole Field (All elds, unless Depends On
+otherwise stated, represent d r c
+information at the level of tasks)
+dNumMappers Number of map tasks in the job X X
+dNumReducers Number of reduce tasks in the job X
+dMapInRecs Map input records X X
+dMapInBytes Map input bytes X X
+dMapOutRecs Map output records X X
+dMapOutBytes Map output bytes X X
+dNumSpills Number of spills X X
+dSpillBuerRecs Number of records in buer per spill X X
+dSpillBuerSize Total size of records in buer per spill X X
+dSpillFileRecs Number of records in spill le X X
+dSpillFileSize Size of a spill le X X
+dNumRecsSpilled Total spilled records X X
+dNumMergePasses Number of merge rounds X X
+dShueSize Total shue size X X
+dReduceInGroups Reduce input groups (unique keys) X X
+dReduceInRecs Reduce input records X X
+dReduceInBytes Reduce input bytes X X
+dReduceOutRecs Reduce output records X X
+dReduceOutBytes Reduce output bytes X X
+dCombineInRecs Combine input records X X
+dCombineOutRecs Combine output records X X
+dLocalBytesRead Bytes read from local le system X X
+dLocalBytesWritten Bytes written to local le system X X
+dHdfsBytesRead Bytes read from HDFS X X
+dHdfsBytesWritten Bytes written to HDFS X X
+ Cost Statistics elds capture statistical information about execution time for a MapReduce
+job that is expected to remain unchanged across dierent executions of the job unless the
+cluster resources (e.g., CPU, I/O) available per node change. Table 4 lists all the cost statistics
+elds.
+ Conguration Parameters: In Hadoop, a set of cluster-wide and job-level conguration pa-
+rameter settings determine how a given MapReduce job will execute on a given cluster. Table
+5 lists all relevant conguration parameters.
+The performance models give good accuracy by capturing the subtleties of MapReduce job execution
+at the ne granularity of phases within map and reduce tasks. The current models were developed
+for Hadoop, but the overall approach applies to any MapReduce implementation.
+To simplify the notation, we use the abbreviations contained in Tables 1, 2, 3, 4, and 5. Note
+the prexes in all abbreviations used to distinguish where each abbreviation belongs to: d for
+dataset elds, c for cost elds, ds for data statistics elds, cs for cost statistics elds, p for Hadoop
+parameters, and t for temporary information not stored in the prole.
+4
+Table 2: Cost elds in the job prole. d, r, and c denote respectively input data properties, cluster
+resource properties, and conguration parameter settings.
+Abbreviation Prole Field (All elds represent Depends On
+information at the level of tasks) d r c
+cSetupPhaseTime Setup phase time in a task X X X
+cCleanupPhaseTime Cleanup phase time in a task X X X
+cReadPhaseTime Read phase time in the map task X X X
+cMapPhaseTime Map phase time in the map task X X X
+cCollectPhaseTime Collect phase time in the map task X X X
+cSpillPhaseTime Spill phase time in the map task X X X
+cMergePhaseTime Merge phase time in map/reduce task X X X
+cShuePhaseTime Shue phase time in the reduce task X X X
+cReducePhaseTime Reduce phase time in the reduce task X X X
+cWritePhaseTime Write phase time in the reduce task X X X
+In an eort to present concise formulas and avoid the use of conditionals as much as possible,
+we make the following denitions and initializations:
+Identity Function I (x ) =
+(
+1 , if x exists or equals true
+0 , otherwise
+(1)
+If (pUseCombine == FALSE)
+dsCombineSizeSel = 1
+dsCombineRecsSel = 1
+csCombineCPUCost = 0
+If (pIsInCompressed == FALSE)
+dsInputCompressRatio = 1
+csInUncomprCPUCost = 0
+If (pIsIntermCompressed == FALSE)
+dsIntermCompressRatio = 1
+csIntermUncomCPUCost = 0
+csIntermComCPUCost = 0
+If (pIsOutCompressed == FALSE)
+dsOutCompressRatio = 1
+csOutComprCPUCost = 0
+5
+Table 3: Data
+ow statistics elds in the job prole. d, r, and c denote respectively input data
+properties, cluster resource properties, and conguration parameter settings.
+Abbreviation Prole Field (All elds represent Depends On
+information at the level of tasks) d r c
+dsInputPairWidth Width of input key-value pairs X
+dsRecsPerRedGroup Number of records per reducer's group X
+dsMapSizeSel Map selectivity in terms of size X
+dsMapRecsSel Map selectivity in terms of records X
+dsReduceSizeSel Reduce selectivity in terms of size X
+dsReduceRecsSel Reduce selectivity in terms of records X
+dsCombineSizeSel Combine selectivity in terms of size X X
+dsCombineRecsSel Combine selectivity in terms of records X X
+dsInputCompressRatio Input data compression ratio X
+dsIntermCompressRatio Map output compression ratio X X
+dsOutCompressRatio Output compression ratio X X
+dsStartupMem Startup memory per task X
+dsSetupMem Setup memory per task X
+dsCleanupMem Cleanup memory per task X
+dsMemPerMapRec Memory per map's record X
+dsMemPerRedRec Memory per reduce's record X
+3 Modeling the Read and Map Phases in the Map Task
+During this phase, the input split is read (and uncompressed if necessary) and the key-value pairs
+are created and passed as input to the user-dened map function.
+dMapInBytes =
+pSplitSize
+dsInputCompressRatio
+(2)
+dMapInRecs =
+dMapInBytes
+dsInputPairWidth
+(3)
+The cost of the Map Read phase is:
+cReadPhaseTime = pSplitSize  csHdfsReadCost
++ pSplitSize  csInUncomprCPUCost (4)
+The cost of the Map phase is:
+cMapPhaseTime = dMapInRecs  csMapCPUCost (5)
+If the MapReduce job consists only of mappers (i.e., pNumReducers = 0 ), then the spilling and
+merging phases will not be executed and the map output will be written directly to HDFS.
+dMapOutBytes = dMapInBytes  dsMapSizeSel (6)
+dMapOutRecs = dMapInRecs  dsMapRecsSel (7)
+6
+Table 4: Cost statistics elds in the job prole. d, r, and c denote respectively input data properties,
+cluster resource properties, and conguration parameter settings.
+Abbreviation Prole Field (All elds represent information DependsOn
+at the level of tasks) d r c
+csHdfsReadCost I/O cost for reading from HDFS per byte X
+csHdfsWriteCost I/O cost for writing to HDFS per byte X
+csLocalIOReadCost I/O cost for reading from local disk per byte X
+csLocalIOWriteCost I/O cost for writing to local disk per byte X
+csNetworkCost Cost for network transfer per byte X
+csMapCPUCost CPU cost for executing the Mapper per record X
+csReduceCPUCost CPU cost for executing the Reducer per record X
+csCombineCPUCost CPU cost for executing the Combiner per record X
+csPartitionCPUCost CPU cost for partitioning per record X
+csSerdeCPUCost CPU cost for serializing/deserializing per record X
+csSortCPUCost CPU cost for sorting per record X
+csMergeCPUCost CPU cost for merging per record X
+csInUncomprCPUCost CPU cost for uncompr/ing the input per byte X
+csIntermUncomCPUCost CPU cost for uncompr/ing map output per byte X X
+csIntermComCPUCost CPU cost for compressing map output per byte X X
+csOutComprCPUCost CPU cost for compressing the output per byte X X
+csSetupCPUCost CPU cost of setting up a task X
+csCleanupCPUCost CPU cost of cleaning up a task X
+The cost of the Map Write phase is:
+cWritePhaseTime =
+dMapOutBytes  csOutComprCPUCost
++dMapOutBytes  dsOutCompressRatio  csHdfsWriteCost (8)
+4 Modeling the Collect and Spill Phases in the Map Task
+The map function generates output key-value pairs (records) that are placed in the map-side mem-
+ory buer of size pSortMB. The amount of data output by the map function is calculated as follows:
+dMapOutBytes = dMapInBytes  dsMapSizeSel (9)
+dMapOutRecs = dMapInRecs  dsMapRecsSel (10)
+tMapOutRecWidth =
+dMapOutBytes
+dMapOutRecs
+(11)
+The map-side buer consists of two disjoint parts: the serialization part that stores the serialized
+map-output records, and the accounting part that stores 16 bytes of metadata per record. When
+either of these two parts lls up to the threshold determined by pSpillPerc, the spill process begins.
+The maximum number of records in the serialization buer before a spill is triggered is:
+7
+Table 5: A subset of cluster-wide and job-level Hadoop parameters.
+Abbreviation Hadoop Parameter Default
+Value
+pNumNodes Number of Nodes
+pTaskMem mapred.child.java.opts -Xmx200m
+pMaxMapsPerNode mapred.tasktracker.map.tasks.max 2
+pMaxRedsPerNode mapred.tasktracker.reduce.tasks.max 2
+pNumMappers mapred.map.tasks
+pSortMB io.sort.mb 100 MB
+pSpillPerc io.sort.spill.percent 0.8
+pSortRecPerc io.sort.record.percent 0.05
+pSortFactor io.sort.factor 10
+pNumSpillsForComb min.num.spills.for.combine 3
+pNumReducers mapred.reduce.tasks
+pReduceSlowstart mapred.reduce.slowstart.completed.maps 0.05
+pInMemMergeThr mapred.inmem.merge.threshold 1000
+pShueInBufPerc mapred.job.shue.input.buer.percent 0.7
+pShueMergePerc mapred.job.shue.merge.percent 0.66
+pReducerInBufPerc mapred.job.reduce.input.buer.percent 0
+pUseCombine mapred.combine.class or mapreduce.combine.class null
+pIsIntermCompressed mapred.compress.map.output false
+pIsOutCompressed mapred.output.compress false
+pIsInCompressed Whether the input is compressed or not
+pSplitSize The size of the input split
+tMaxSerRecs =
+
+pSortMB  2 20  (1 í¯€í°€ pSortRecPerc)  pSpillPerc
+tMapOutRecWidth
+
+(12)
+The maximum number of records in the accounting buer before a spill is triggered is:
+tMaxAccRecs =
+
+pSortMB  2 20  pSortRecPerc  pSpillPerc
+16
+
+(13)
+Hence, the number of records in the buer before a spill is:
+dSpillBuerRecs = Minf tMaxSerRecs; tMaxAccRecs ; dMapOutRecs g (14)
+The size of the buer included in a spill is:
+dSpillBuerSize = dSpillBuerRecs  tMapOutRecWidth (15)
+The overall number of spills is:
+dNumSpills =
+
+dMapOutRecs
+dSpillBuerRecs
+
+(16)
+The number of pairs and size of each spill le (i.e., the amount of data that will be written to
+disk) depend on the width of each record, the possible use of the Combiner, and the possible use of
+8
+compression. The Combiner's pair and size selectivities as well as the compression ratio are part of
+the Data
+ow Statistics elds of the job prole. If a Combiner is not used, then the corresponding
+selectivities are set to 1 by default. If map output compression is disabled, then the compression
+ratio is set to 1.
+Hence, the number of records and size of a spill le are:
+dSpillFileRecs = dSpillBuerRecs  dsCombineRecsSel (17)
+dSpillFileSize =dSpillBuerSize  dsCombineSizeSel
+dsIntermCompressRatio (18)
+The total cost of the Map's Collect and Spill phases are:
+cCollectPhaseTime =dMapOutRecs  csPartitionCPUCost
++ dMapOutRecs  csSerdeCPUCost (19)
+cSpillPhaseTime = dNumSpills
+[ dSpillBuerRecs  log2 (
+dSpillBuerRecs
+pNumReducers
+)  csSortCPUCost
++ dSpillBuerRecs  csCombineCPUCost
++ dSpillBuerSize  dsCombineSizeSel  csIntermComCPUCost
++ dSpillFileSize  csLocalIOWriteCost ] (20)
+5 Modeling the Merge Phase in the Map Task
+The goal of the Merge phase is to merge all the spill les into a single output le, which is written
+to local disk. The Merge phase will occur only if more than one spill le is created. Multiple merge
+passes might occur, depending on the pSortFactor parameter. pSortFactor denes the maximum
+number of spill les that can be merged together to form a new single le. We dene a merge pass
+to be the merging of at most pSortFactor spill les. We dene a merge round to be one or more
+merge passes that merge only spills produced by the spill phase or a previous merge round. For
+example, suppose dNumSpills = 28 and pSortFactor = 10 . Then, 2 merge passes will be performed
+(merging 10 les each) to create 2 new les. This constitutes the rst merge round. Then, the 2
+new les will be merged together with the 8 original spill les to create the nal output le, forming
+the 2nd and nal merge round.
+The rst merge pass is unique because Hadoop will calculate the optimal number of spill les
+to merge so that all other merge passes will merge exactly pSortFactor les. Notice how, in the
+example above, the nal merge round merged exactly 10 les.
+The nal merge pass is also unique in the sense that if the number of spills to be merged is
+greater than or equal to pNumSpillsForComb, the combiner will be used again. Hence, we treat
+the intermediate merge rounds and the nal merge round separately. For the intermediate merge
+passes, we calculate how many times (on average) a single spill will be read.
+9
+Note that the remaining section assumes numSpils  pSortFactor2 . In the opposite case, we
+must use a simulation-based approach in order to calculate the number of spill les merged during
+the intermediate merge rounds as well as the total number of merge passes. Since the Reduce task
+also contains a similar Merge Phase, we dene the following three methods to reuse later:
+calcNumSpillsFirstPass(N; F) =
+8><
+>:
+N , if N  F
+F , if (N í¯€í°€ 1) MOD (F í¯€í°€ 1) = 0
+(N í¯€í°€ 1) MOD (F í¯€í°€ 1) + 1 , otherwise
+(21)
+calcNumSpillsIntermMerge(N; F) =
+(
+0 , if N  F
+P +
+Ní¯€í°€P
+F
+
+ F , if N  F2
+, where P = calcNumSpillsFirstPass(N; F) (22)
+calcNumSpillsFinalMerge(N; F) =
+(
+N , if N  F
+1 +
+Ní¯€í°€P
+F
+
++ (N í¯€í°€ S) , if N  F2
+, where P = calcNumSpillsFirstPass(N; F)
+, where S = calcNumSpillsIntermMerge(N; F) (23)
+The number of spills read during the rst merge pass is:
+tNumSpillsFirstPass = calcNumSpillsFirstPass(dNumSpills; pSortFactor) (24)
+The number of spills read during intermediate merging is:
+tNumSpillsIntermMerge = calcNumSpillsIntermMerge(dNumSpills; pSortFactor) (25)
+The total number of merge passes is:
+dNumMergePasses = 8
+>><
+>>:
+0 , if dNumSpills = 1
+1 , if dNumSpills  pSortF actor
+2 +
+j
+dNumSpillsí¯€í°€tNumSpillsF irstP ass
+pSortF actor
+k
+, if dNumSpills  pSortF actor2
+(26)
+The number of spill les for the nal merge round is:
+tNumSpillsFinalMerge = calcNumSpillsFinalMerge(dNumSpills; pSortFactor) (27)
+10
+As discussed earlier, the Combiner might be used during the nal merge round. In this case, the
+size and record Combiner selectivities are:
+tUseCombInMerge =(dNumSpills > 1 ) AND (pUseCombine)
+AND (tNumSpillsFinalMerge  pNumSpillsForComb) (28)
+tMergeCombSizeSel =
+(
+dsCombineSizeSel , if tUseCombInMerge
+1 , otherwise
+(29)
+tMergeCombRecsSel =
+(
+dsCombineRecsSel , if tUseCombInMerge
+1 , otherwise
+(30)
+The total number of records spilled equals the sum of (i) the records spilled during the Spill phase,
+(ii) the number of records that participated in the intermediate merge rounds, and (iii) the number
+of records spilled during the nal merge round.
+dNumRecsSpilled =dSpillFileRecs  dNumSpills
++dSpillFileRecs  tNumSpillsIntermMerge
++dSpillFileRecs  dNumSpills  tMergeCombRecsSel (31)
+The nal size and number of records for the nal map output data are:
+tIntermDataSize =dNumSpills  dSpillFileSize  tMergeCombSizeSel (32)
+tIntermDataRecs =dNumSpills  dSpillFileRecs  tMergeCombRecsSel (33)
+The total cost of the Merge phase is divided into the cost for performing the intermediate merge
+rounds and the cost for performing the nal merge round.
+tIntermMergeTime =tNumSpillsIntermMerge 
+[ dSpillFileSize  csLocalIOReadCost
++dSpillFileSize  csIntermUncomCPUCost
++dSpillFileRecs  csMergeCPUCost
++
+dSpillFileSize
+dsIntermCompressRatio
+ csIntermComCPUCost
++dSpillFileSize  csLocalIOWriteCost ] (34)
+tFinalMergeTime =dNumSpills 
+[ dSpillFileSize  csLocalIOReadCost
++dSpillFileSize  csIntermUncomCPUCost
++dSpillFileRecs  csMergeCPUCost
++dSpillFileRecs  csCombineCPUCost ]
++
+tIntermDataSize
+dsIntermCompressRatio
+ csIntermComCPUCost
++tIntermDataSize  csLocalIOWriteCost (35)
+11
+cMergePhaseTime = tIntermMergeTime + tFinalMergeTime (36)
+6 Modeling the Shue Phase in the Reduce Task
+In the Shue phase, the framework fetches the relevant map output partition from each mapper
+(called a map segment) and copies it to the reducer's node. If the map output is compressed,
+Hadoop will uncompress it after the transfer as part of the shuing process. Assuming a uniform
+distribution of the map output to all reducers, the size and number of records for each map segment
+that reaches the reduce side are:
+tSegmentComprSize =
+tIntermDataSize
+pNumReducers
+(37)
+tSegmentUncomprSize =
+tSegmentComprSize
+dsIntermCompressRatio
+(38)
+tSegmentRecs =
+tIntermDataRecs
+pNumReducers
+(39)
+where tIntermDataSize and tIntermDataRecs are the size and number of records produced as
+intermediate output by a single mapper (see Section 5). A more complex model can be used to
+account for the presence of skew. The data fetched to a single reducer will be:
+dShueSize = pNumMappers  tSegmentComprSize (40)
+dShueRecs = pNumMappers  tSegmentRecs (41)
+The intermediate data is transfered and placed in an in-memory shue buer with a size propor-
+tional to the parameter pShueInBufPerc:
+tShueBuerSize = pShueInBufPerc  pTaskMem (42)
+However, when the segment size is greater than 25% times the tShueBuerSize, the segment will
+get copied directly to local disk instead of the in-memory shue buer. We consider these two
+cases separately.
+Case 1: tSegmentUncomprSize < 0 :25  tShueBuerSize
+The map segments are transfered, uncompressed if needed, and placed into the shue buer.
+When either (a) the amount of data placed in the shue buer reaches a threshold size determined
+by the pShueMergePerc parameter or (b) the number of segments becomes greater than the
+pInMemMergeThr parameter, the segments are merged and spilled to disk creating a new local le
+(called shue le). The size threshold to begin merging is:
+tMergeSizeThr = pShueMergePerc  tShueBuerSize (43)
+The number of map segments merged into a single shue le is:
+tNumSegInShueFile =
+tMergeSizeThr
+tSegmentUncomprSize
+(44)
+12
+If (dtNumSegInShueFilee  tSegmentUncomprSize  tShueBuerSize)
+tNumSegInShueFile = dtNumSegInShueFilee
+else
+tNumSegInShueFile = btNumSegInShueFilec
+If (tNumSegInShueFile > pInMemMergeThr)
+tNumSegInShueFile = pInMemMergeThr (45)
+If a Combiner is specied, then it is applied during the merging. If compression is enabled, then the
+(uncompressed) map segments are compressed after merging and before written to disk. Note also
+that if numMappers < tNumSegInShueFile, then merging will not happen. The size and number
+of records in a single shue le is:
+tShueFileSize =
+tNumSegInShueFile  tSegmentComprSize  dsCombineSizeSel (46)
+tShueFileRecs =
+tNumSegInShueFile  tSegmentRecs  dsCombineRecsSel (47)
+tNumShueFiles =
+
+pNumMappers
+tNumSegInShueFile
+
+(48)
+At the end of the merging process, some segments might remain in memory.
+tNumSegmentsInMem = pNumMappers MOD tNumSegInShueFile (49)
+Case 2: tSegmentUncomprSize  0 :25  tShueBuerSize
+When a map segment is transfered directly to local disk, it becomes equivalent to a shue le.
+Hence, the corresponding temporary variables introduced in Case 1 above are:
+tNumSegInShueFile = 1 (50)
+tShueFileSize = tSegmentComprSize (51)
+tShueFileRecs = tSegmentRecs (52)
+tNumShueFiles = pNumMappers (53)
+tNumSegmentsInMem = 0 (54)
+Either case can create a set of shue les on disk. When the number of shue les on disk increases
+above a certain threshold (which equals 2  pSortFactor í¯€í°€ 1 ), a new merge thread is triggered and
+pSortFactor shue les are merged into a new and larger sorted shue le. The Combiner is not
+used during this so-called disk merging. The total number of such disk merges are:
+tNumShueMerges =
+(
+j0 , if tNumShuffleFiles < 2  pSortFactor í¯€í°€ 1
+tNumShuffleF ilesí¯€í°€2pSortFactor+1
+pSortFactor
+k
++ 1 , otherwise
+(55)
+13
+At the end of the Shue phase, a set of \merged" and \unmerged" shue les will exist on disk.
+tNumMergShufFiles = tNumShueMerges (56)
+tMergShufFileSize = pSortFactor  tShueFileSize (57)
+tMergShufFileRecs = pSortFactor  tShueFileRecs (58)
+tNumUnmergShufFiles =tNumShueFiles
+í¯€í°€(pSortFactor  tNumShueMerges) (59)
+tUnmergShufFileSize = tShueFileSize (60)
+tUnmergShufFileRecs = tShueFileRecs (61)
+The total cost of the Shue phase includes cost for the network transfer, cost for any in-memory
+merging, and cost for any on-disk merging, as described above.
+tInMemMergeTime =
+I (tSegmentUncomprSize < 0 :25  tShueBuerSize)
+[ dShueSize  csIntermUncomCPUCost
++tNumShueFiles  tShueFileRecs  csMergeCPUCost
++tNumShueFiles  tShueFileRecs  csCombineCPUCost
++tNumShueFiles 
+tShueFileSize
+dsIntermCompressRatio
+ csIntermComCPUCost ]
++tNumShueFiles  tShueFileSize  csLocalIOWriteCost (62)
+tOnDiskMergeTime = tNumMergShufFiles 
+[ tMergShufFileSize  csLocalIOReadCost
++tMergShufFileSize  csIntermUncomCPUCost
++tMergShufFileRecs  csMergeCPUCost
++
+tMergShufFileSize
+dsIntermCompressRatio
+ csIntermComCPUCost
++tMergShufFileSize  csLocalIOWriteCost ] (63)
+cShuePhaseTime =dShueSize  csNetworkCost
++tInMemMergeTime
++tOnDiskMergeTime (64)
+14
+7 Modeling the Merge Phase in the Reduce Task
+After all map output data has been successful transfered to the Reduce node, the Merge phase1
+begins. During this phase, the map output data is merged into a single stream that is fed to the
+reduce function for processing. Similar to the Map's Merge phase (see Section 5), the Reduce's
+Merge phase may occur it multiple rounds. However, instead of creating a single output le during
+the nal merge round, the data is sent directly to the reduce function.
+The Shue phase may produce (i) a set of merged shue les on disk, (ii) a set of unmerged
+shue les on disk, and (iii) a set of map segments in memory. The total number of shue les
+on disk is:
+tNumShufFilesOnDisk = tNumMergShufFiles + tNumUnmergShufFiles (65)
+The merging in this phase is done in three steps.
+Step 1: Some map segments are marked for eviction from memory in order to satisfy a memory
+constraint enforced by the pReducerInBufPerc parameter, which species the amount of memory
+allowed to be occupied by the map segments before the reduce function begins.
+tMaxSegmentBuerSize = pReducerInBufPerc  pTaskMem (66)
+The amount of memory currently occupied by map segments is:
+tCurrSegmentBuerSize =
+tNumSegmentsInMem  tSegmentUncomprSize (67)
+Hence, the number of map segments to evict from, and retain in, memory are:
+If (tCurrSegmentBuerSize > tMaxSegmentBuerSize)
+tNumSegmentsEvicted =
+
+tCurrSegmentBuerSize í¯€í°€ tMaxSegmentBuerSize
+tSegmentUncomprSize
+
+else
+tNumSegmentsEvicted = 0 (68)
+tNumSegmentsRemainMem = tNumSegmentsInMem í¯€í°€ tNumSegmentsEvicted (69)
+If the number of existing shue les on disk is less than pSortFactor, then the map segments
+marked for eviction will be merged into a single shue le on disk. Otherwise, the map segments
+marked for eviction are left to be merged with the shue les on disk during Step 2 (i.e., Step 1
+does not happen).
+1The Merge phase in the Reduce task is also called \Sort phase" in the literature, even though no sorting occurs.
+15
+If (tNumShufFilesOnDisk < pSortFactor)
+tNumShufFilesFromMem = 1
+tShufFilesFromMemSize = tNumSegmentsEvicted  tSegmentComprSize
+tShufFilesFromMemRecs = tNumSegmentsEvicted  tSegmentRecs
+tStep1MergingSize = tShufFilesFromMemSize
+tStep1MergingRecs = tShufFilesFromMemRecs
+else
+tNumShufFilesFromMem = tNumSegmentsEvicted
+tShufFilesFromMemSize = tSegmentComprSize
+tShufFilesFromMemRecs = tSegmentRecs
+tStep1MergingSize = 0
+tStep1MergingRecs = 0 (70)
+The total cost of Step 1 (which could be zero) is:
+cStep1Time =tStep1MergingRecs  csMergeCPUCost
++
+tStep1MergingSize
+dsIntermCompressRatio
+ csIntermComCPUCost
++tStep1MergingSize  csLocalIOWriteCost (71)
+Step 2: Any shue les that reside on disk will go through a merging phase in multiple merge
+rounds (similar to the process in Section 5). This step will happen only if there exists at least one
+shue le on disk. The total number of les to merge during Step 2 is:
+tFilesToMergeStep2 =
+tNumShufFilesOnDisk + tNumShufFilesFromMem (72)
+The number of intermediate reads (and writes) are:
+tIntermMergeReads2 =
+calcNumSpillsIntermMerge(tFilesToMergeStep2 ; pSortFactor) (73)
+The main dierence from Section 5 is that the merged les in this case have dierent sizes. We
+account for the dierent sizes by attributing merging costs proportionally. Hence, the total size
+and number of records involved in the merging process during Step 2 are:
+tStep2MergingSize =
+tIntermMergeReads2
+tFilesToMergeStep2
+
+[ tNumMergShufFiles  tMergShufFileSize
++tNumUnmergShufFiles  tUnmergShufFileSize
++tNumShufFilesFromMem  tShufFilesFromMemSize] (74)
+16
+tStep2MergingRecs =
+tIntermMergeReads2
+tFilesToMergeStep2
+
+[ tNumMergShufFiles  tMergShufFileRecs
++tNumUnmergShufFiles  tUnmergShufFileRecs
++tNumShufFilesFromMem  tShufFilesFromMemRecs] (75)
+The total cost of Step 2 (which could also be zero) is:
+cStep2Time =tStep2MergingSize  csLocalIOReadCost
++tStep2MergingSize  cIntermUnomprCPUCost
++tStep2MergingRecs  csMergeCPUCost
++
+tStep2MergingSize
+dsIntermCompressRatio
+ csIntermComCPUCost
++tStep2MergingSize  csLocalIOWriteCost (76)
+Step 3: All les on disk and in memory will be merged together. The process is identical to step
+2 above. The total number of les to merge during Step 3 is:
+tFilesToMergeStep3 = tNumSegmentsRemainMem
++calcNumSpillsFinalMerge(tFilesToMergeStep2 ; pSortFactor) (77)
+The number of intermediate reads (and writes) are:
+tIntermMergeReads3 =
+calcNumSpillsIntermMerge(tFilesToMergeStep3 ; pSortFactor) (78)
+Hence, the total size and number of records involved in the merging process during Step 3 are:
+tStep3MergingSize =
+tIntermMergeReads3
+tFilesToMergeStep3
+ dShueSize (79)
+tStep3MergingRecs =
+tIntermMergeReads3
+tFilesToMergeStep3
+ dShueRecs (80)
+The total cost of Step 3 (which could also be zero) is:
+cStep3Time =tStep3MergingSize  csLocalIOReadCost
++tStep3MergingSize  cIntermUnomprCPUCost
++tStep3MergingRecs  csMergeCPUCost
++
+tStep3MergingSize
+dsIntermCompressRatio
+ csIntermComCPUCost
++tStep3MergingSize  csLocalIOWriteCost (81)
+The total cost of the Merge phase is:
+cMergePhaseTime = cStep1Time + cStep2Time + cStep3Time (82)
+17
+8 Modeling the Reduce and Write Phases in the Reduce Task
+Finally, the user-dened reduce function will processed the merged intermediate data to produce
+the nal output that will be written to HDFS. The size and number of records processed by the
+reduce function is:
+dReduceInBytes =
+tNumShueFiles  tShueFileSize
+dsIntermCompressRatio
++
+tNumSegmentsInMem  tSegmentComprSize
+dsIntermCompressRatio
+(83)
+dReduceInRecs =tNumShueFiles  tShueFileRecs
++tNumSegmentsInMem  tSegmentRecs (84)
+The size and number of records produce by the reduce function is:
+dReduceOutBytes = dReduceInBytes  dsReduceSizeSel (85)
+dReduceOutRecs = dReduceInRecs  dsReduceRecsSel (86)
+The input data to the reduce function may reside in both memory and disk, as produced by the
+Shue and Merge phases.
+tInRedFromDiskSize =tNumMergShufFiles  tMergShufFileSize
++tNumUnmergShufFiles  tUnmergShufFileSize
++tNumShufFilesFromMem  tShufFilesFromMemSize (87)
+The total cost of the Reduce phase is:
+cReducePhaseTime =tInRedFromDiskSize  csLocalIOReadCost
++tInRedFromDiskSize  cIntermUncompCPUCost
++dReduceInRecs  csReduceCPUCost (88)
+The total cost of the Write phase is:
+cWritePhaseTime =
+dReduceOutBytes  csOutComprCPUCost
++dReduceOutBytes  dsOutCompressRatio  csHdfsWriteCost (89)
+18
+8.1 Modeling the Overall MapReduce Job Execution
+A MapReduce job execution consists of several map and reduce tasks executing in parallel and in
+waves. There are two primary ways to estimate the total execution time of the job: (i) simulate the
+task execution using a Task Scheduler Simulator, and (ii) calculate the expected total execution
+time analytically.
+Simulation involves scheduling and simulating the execution of individual tasks on a virtual
+cluster. One simple way for estimating the cost for each task is to sum up the cost elds estimated
+in Sections 3{8. The overall cost for a single map task is:
+totalMapTime =
+8><
+>:
+cReadP haseT ime + cMapPhaseTime + cWriteP haseTime , if pNumReducers = 0
+cReadP haseT ime + cMapPhaseTime + cCollectP haseTime
++cSpillPhaseTime + cMergeP haseTime , if pNumReducers > 0
+(90)
+The overall cost for a single reduce task is:
+totalReduceTime =cShuePhaseTime + cMergePhaseTime
++cReducePhaseTime + cSpillPhaseTime (91)
+The second approach for calculating the total job execution time involves using the following ana-
+lytical estimates:
+totalMapsTime =
+pNumMappers  totalMapTime
+pNumNodes  pMaxMapsPerNode
+(92)
+totalReducesTime =
+pNumReducers  totalReduceTime
+pNumNodes  pMaxRedPerNode
+(93)
+The overall job cost is simply the sum of the costs from all the map and the reduce tasks.
+totalJobTime =
+(
+totalMapsTime , if pNumReducers = 0
+totalMapsTime + totalReducesTime , if pNumReducers > 0
+(94)
+19
