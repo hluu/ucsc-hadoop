@@ -1,8 +1,6 @@
 package ucsc.hadoop.mapreduce.movie;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -11,6 +9,8 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -23,19 +23,20 @@ import ucsc.hadoop.mapreduce.util.ConfigurationUtil;
 
 
 /**
- * Simple MapReduce application to count how many movies per year
+ * Simple MapReduce application to count how many movies per year and use
+ * counter to track bad records
  * 
  * @author hluu
  *
  */
-public class MovieCount extends Configured implements Tool {
+public class MovieCountWithCounter extends Configured implements Tool {
 	
 	private static final Log LOG = LogFactory.getLog(MovieCount.class);
 	
 	public int run(String[] args) throws Exception {
 		Configuration conf = getConf();
 		if (args.length != 2) {
-			System.err.println("Usage: moviecount <in> <out>");
+			System.err.println("Usage: moviecountwithcounter <in> <out>");
 			System.exit(2);
 		}
 		
@@ -48,9 +49,6 @@ public class MovieCount extends Configured implements Tool {
 		job.setMapperClass(MovieTokenizerMapper.class);
 		job.setReducerClass(MovieYearReducer.class);
 
-		job.setMapOutputKeyClass(IntWritable.class);
-		job.setMapOutputValueClass(Text.class);
-		
 		job.setOutputKeyClass(IntWritable.class);
 		job.setOutputValueClass(IntWritable.class);
 		
@@ -58,17 +56,38 @@ public class MovieCount extends Configured implements Tool {
 		FileOutputFormat.setOutputPath(job, new Path(args[1]));
 		
 		boolean result = job.waitForCompletion(true);
+		
+		if (result) {
+			printCounter(job);
+		}
 		return (result) ? 0 : 1;
 	}
 	
+	private void printCounter(Job job) throws IOException {
+		System.out.println("============ displaying counters ============");
+		Counters counters = job.getCounters();
+		Counter badRecordCounter = counters.findCounter(MovieTokenizerMapper.Movie.BAD_RECORD);
+		
+        if (badRecordCounter != null)
+        {
+        	System.out.println(MovieTokenizerMapper.Movie.BAD_RECORD + " value: " + badRecordCounter.getValue());
+        } else {
+        	System.out.println("badRecordCounter is null");
+        }
+	}
+	
 	public static void main(String[] args) throws Exception {
-		int exitCode = ToolRunner.run(new MovieCount(), args);
+		int exitCode = ToolRunner.run(new MovieCountWithCounter(), args);
 		System.exit(exitCode);
 	}
 	
-	public static class MovieTokenizerMapper extends Mapper<Object, Text, IntWritable, Text> {
+	public static class MovieTokenizerMapper extends Mapper<Object, Text, IntWritable, IntWritable> {
+		private final static IntWritable ONE = new IntWritable(1);
 		private final static IntWritable YEAR = new IntWritable();
-		private final static Text MOVIE = new Text();
+		
+		public enum Movie {
+			BAD_RECORD
+		}
 		
 		@Override
 		public void map(Object key, Text value, Context context) 
@@ -78,27 +97,28 @@ public class MovieCount extends Configured implements Tool {
 			if (tokens.length == 3) {
 				int year = Integer.parseInt(tokens[2]);
 				YEAR.set(year);
-				MOVIE.set(tokens[1]);
-				context.write(YEAR, MOVIE);
+				context.write(YEAR, ONE);
+			} else {
+				context.getCounter(Movie.BAD_RECORD).increment(1);
 			}
 			
 		}
 	}
 	
-	public static class MovieYearReducer extends Reducer<IntWritable, Text, IntWritable, IntWritable> {
+	public static class MovieYearReducer extends Reducer<IntWritable, IntWritable, IntWritable, IntWritable> {
 		private IntWritable result = new IntWritable();
 		
 		@Override
-		public void reduce(IntWritable year, Iterable<Text> values, Context context) 
+		public void reduce(IntWritable year, Iterable<IntWritable> values, Context context) 
 				 throws IOException, InterruptedException {
 				
-			Set<String> movieSet = new HashSet<String>();
-			for (Text movie : values) {
-				movieSet.add(movie.toString());
+			int totalCnt = 0;
+			for (IntWritable cnt : values) {
+				totalCnt += cnt.get();
 			}
-			result.set(movieSet.size());
+			
+			result.set(totalCnt);
 			context.write(year, result);
-			movieSet.clear();
 		}
 	}
 	

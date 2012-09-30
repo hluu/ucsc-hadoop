@@ -13,6 +13,11 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.GenericOptionsParser;
 
+/**
+ * Max temperature driver
+ * @author hluu
+ *
+ */
 public class MaxTemperature {
 
   public static void main(String[] args) throws IOException {
@@ -39,4 +44,4 @@ public class MaxTemperature {
     JobClient.runJob(conf);
   }
 }
-// ^^ MaxTemperature
+

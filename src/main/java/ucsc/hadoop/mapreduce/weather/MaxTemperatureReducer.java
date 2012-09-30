@@ -1,6 +1,3 @@
-// cc MaxTemperatureReducer Reducer for maximum temperature example
-// cc MaxTemperatureReducer2 Reducer for maximum temperature example
-// vv MaxTemperatureReducer
 package ucsc.hadoop.mapreduce.weather;
 
 import java.io.IOException;
@@ -13,7 +10,12 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 
-// vv MaxTemperatureReducer2
+/**
+ * Reducer to write out the maximum temperature for each year
+ * 
+ * @author hluu
+ *
+ */
 public class MaxTemperatureReducer extends MapReduceBase
   implements Reducer<Text, IntWritable, Text, IntWritable> {
 
@@ -28,5 +30,3 @@ public class MaxTemperatureReducer extends MapReduceBase
     output.collect(key, new IntWritable(maxValue));
   }
 }
-// ^^ MaxTemperatureReducer2
-// ^^ MaxTemperatureReducer

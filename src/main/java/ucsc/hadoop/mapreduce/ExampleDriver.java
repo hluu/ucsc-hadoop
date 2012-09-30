@@ -24,6 +24,8 @@ import ucsc.hadoop.mapreduce.apache.Grep;
 import ucsc.hadoop.mapreduce.apache.WordCount;
 import ucsc.hadoop.mapreduce.apache.WordCount2;
 import ucsc.hadoop.mapreduce.movie.MovieCount;
+import ucsc.hadoop.mapreduce.movie.MovieCountUsingCombiner;
+import ucsc.hadoop.mapreduce.movie.MovieCountWithCounter;
 import ucsc.hadoop.mapreduce.movie.MovieCountWithLimit;
 import ucsc.hadoop.mapreduce.weather.MaxTemperature;
 
@@ -38,9 +40,13 @@ public class ExampleDriver {
     ProgramDriver pgd = new ProgramDriver();
     try {
       pgd.addClass("moviecount", MovieCount.class, 
-                "A map/reduce program that counts # of movies for each year");	
+                "A map/reduce program that counts # of movies for each year");
+      pgd.addClass("moviecountcombiner", MovieCountUsingCombiner.class, 
+              "A map/reduce program that counts # of movies for each year and using combiner");
       pgd.addClass("moviecountwithlimit", MovieCountWithLimit.class, 
               "A map/reduce program that counts # of movies for each year (example of using configuration)");	
+      pgd.addClass("moviecountwithcounter", MovieCountWithCounter.class, 
+              "A map/reduce program that counts # of movies for each year (example of using counter)");
       
       pgd.addClass("wordcount", WordCount.class, 
                    "A map/reduce program that counts the words in the input files.");

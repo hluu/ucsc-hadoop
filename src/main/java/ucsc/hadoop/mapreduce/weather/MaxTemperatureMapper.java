@@ -1,5 +1,3 @@
-// cc MaxTemperatureMapper Mapper for maximum temperature example
-// vv MaxTemperatureMapper
 package ucsc.hadoop.mapreduce.weather;
 
 import java.io.IOException;
@@ -12,6 +10,12 @@ import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
+/**
+ * Max temperature mapper - parses the input and output year as key and temperature as vaue
+ * 
+ * @author hluu
+ *
+ */
 public class MaxTemperatureMapper extends MapReduceBase
   implements Mapper<LongWritable, Text, Text, IntWritable> {
 
@@ -35,4 +39,3 @@ public class MaxTemperatureMapper extends MapReduceBase
     }
   }
 }
-// ^^ MaxTemperatureMapper

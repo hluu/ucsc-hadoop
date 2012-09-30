@@ -36,7 +36,7 @@ public class MovieCountWithLimit extends Configured implements Tool {
 		ConfigurationUtil.dumpConfigurations(conf, System.out);
 
 		if (args.length != 2) {
-			System.err.println("Usage: moviecount <in> <out>");
+			System.err.println("Usage: moviecountwithlimit <in> <out>");
 			System.exit(2);
 		}
 		
