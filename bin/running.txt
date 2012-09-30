@@ -1,0 +1,20 @@
+# movie count
+./bin/rmMovieOutput.sh
+hadoop ucsc.hadoop.mapreduce.movie.MovieCount ./data/movie ~/tmp/hadoop/output/movie
+
+# movie count with combiner
+# running w/o combiner
+./bin/rmActorCountOutput.sh
+
+hadoop ucsc.hadoop.mapreduce.movie.MovieCountWithCombiner ./data/movie ~/tmp/hadoop/output/actor-count
+
+# running w/o combiner
+hadoop ucsc.hadoop.mapreduce.movie.MovieCountWithCombiner -D useCombiner=true ./data/movie ~/tmp/hadoop/output/actor-count
+
+# running with combiner
+
+# display output
+more ~/tmp/hadoop/output/movie/part-r-00000
+
+# print second column and use tab delimiter
+awk -Ft '{print $2}' < ~/tmp/2012-movie.txt

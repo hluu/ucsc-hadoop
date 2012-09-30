@@ -21,12 +21,12 @@ import ucsc.hadoop.mapreduce.util.ConfigurationUtil;
 
 
 /**
- * Simple MapReduce application to count how many movies per year and using combiner
+ * Simple MapReduce application to count how many movies each actor plays
  * 
  * @author hluu
  *
  */
-public class MovieCountUsingCombiner extends Configured implements Tool {
+public class MovieCountWithCombiner extends Configured implements Tool {
 	
 	private static final Log LOG = LogFactory.getLog(MovieCount.class);
 	
@@ -41,13 +41,23 @@ public class MovieCountUsingCombiner extends Configured implements Tool {
 		
 		LOG.info("input: " + args[0] + " output: " + args[1]);
 		
-		Job job = new Job(conf, "movie count");
-		job.setJarByClass(MovieCountUsingCombiner.class);
-		job.setMapperClass(MovieTokenizerMapper.class);
-		job.setCombinerClass(MovieYearReducer.class);
-		job.setReducerClass(MovieYearReducer.class);
+		Job job = new Job(conf, "movie count with combiner");
+		job.setJarByClass(MovieCountWithCombiner.class);
+		job.setMapperClass(ActorMapper.class);
+		
+		if (conf.getBoolean("useCombiner", false)) {
+			LOG.info("****** running WITH combiner ********");
+			job.setCombinerClass(ActorReducer.class);	
+		} else {
+			LOG.info("****** running WITHOUT combiner ********");
+		}
 
-		job.setOutputKeyClass(IntWritable.class);
+		job.setReducerClass(ActorReducer.class);
+		
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(IntWritable.class);
+		
+		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(IntWritable.class);
 		
 		FileInputFormat.addInputPath(job, new Path(args[0]));
@@ -58,13 +68,18 @@ public class MovieCountUsingCombiner extends Configured implements Tool {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		int exitCode = ToolRunner.run(new MovieCountUsingCombiner(), args);
+		int exitCode = ToolRunner.run(new MovieCountWithCombiner(), args);
 		System.exit(exitCode);
 	}
 	
-	public static class MovieTokenizerMapper extends Mapper<Object, Text, IntWritable, IntWritable> {
+	/**
+	 * Mapper 
+	 * @author hluu
+	 *
+	 */
+	public static class ActorMapper extends Mapper<Object, Text, Text, IntWritable> {
 		private final static IntWritable ONE = new IntWritable(1);
-		private final static IntWritable YEAR = new IntWritable();
+		private final static Text ACTOR = new Text();
 		
 		@Override
 		public void map(Object key, Text value, Context context) 
@@ -72,28 +87,31 @@ public class MovieCountUsingCombiner extends Configured implements Tool {
 			String[] tokens = value.toString().split("\\t");
 			
 			if (tokens.length == 3) {
-				int year = Integer.parseInt(tokens[2]);
-				YEAR.set(year);
-				context.write(YEAR, ONE);
+				ACTOR.set(tokens[0]);
+				context.write(ACTOR, ONE);
 			}
-			
 		}
 	}
 	
-	public static class MovieYearReducer extends Reducer<IntWritable, IntWritable, IntWritable, IntWritable> {
+	
+	/**
+	 * Reducer
+	 * @author hluu
+	 *
+	 */
+	public static class ActorReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
 		private IntWritable result = new IntWritable();
 		
 		@Override
-		public void reduce(IntWritable year, Iterable<IntWritable> values, Context context) 
+		public void reduce(Text actor, Iterable<IntWritable> values, Context context) 
 				 throws IOException, InterruptedException {
 				
-			int totalCnt = 0;
-			for (IntWritable cnt : values) {
-				totalCnt += cnt.get();
+			int sum = 0;
+			for (IntWritable count : values) {
+				sum += count.get();
 			}
-			
-			result.set(totalCnt);
-			context.write(year, result);
+			result.set(sum);
+			context.write(actor, result);
 		}
 	}
 	
