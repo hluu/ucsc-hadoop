@@ -37,6 +37,15 @@ hadoop ucsc.hadoop.mapreduce.text.Search ./data/big-data-papers ~/tmp/hadoop/out
 # display output
 more ~/tmp/hadoop/output/movie/part-r-00000
 
+# *********** secondary sort - year and then title  *************
+./bin/rmSortMovieOutput.sh
+hadoop ucsc.hadoop.mapreduce.movie.MovieSortByYearTitle./data/movie-weights/ ~/tmp/hadoop/output/movie-sort
+
+# *********** sort by year and max weight  *************
+./bin/rmSortMovieOutput.sh
+hadoop ucsc.hadoop.mapreduce.movie.MovieSortByYearMaxWeight ./data/movie-weights/ ~/tmp/hadoop/output/movie-sort
+
+
 # **************** distributed cache *************
 ./bin/rmMovieOutput.sh
 hadoop ucsc.hadoop.mapreduce.movie.MovieGrepDistributedCache -files ./data/movie-weights/ibdb-weights.tsv ./data/movie ~/tmp/hadoop/output/movie dalma
