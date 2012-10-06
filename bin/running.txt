@@ -37,5 +37,9 @@ hadoop ucsc.hadoop.mapreduce.text.Search ./data/big-data-papers ~/tmp/hadoop/out
 # display output
 more ~/tmp/hadoop/output/movie/part-r-00000
 
+# **************** distributed cache *************
+./bin/rmMovieOutput.sh
+hadoop ucsc.hadoop.mapreduce.movie.MovieGrepDistributedCache -files ./data/movie-weights/ibdb-weights.tsv ./data/movie ~/tmp/hadoop/output/movie dalma
+
 # print second column and use tab delimiter
 awk -Ft '{print $2}' < ~/tmp/2012-movie.txt

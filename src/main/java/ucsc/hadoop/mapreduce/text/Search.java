@@ -71,9 +71,9 @@ public class Search extends Configured implements Tool {
 			if (LOG.isDebugEnabled()) {
 				LOG.debug("pattern: " + pattern);
 			}
-			
+
 			regexPattern = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
-		  }
+		}
 		
 		@Override
 		public void map(Object key, Text value, Context context) 
