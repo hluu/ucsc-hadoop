@@ -46,7 +46,7 @@ public class MovieGrepDistributedCache extends Configured implements Tool {
 		
 		Job job = new Job(conf, "movie distributed cache");
 		job.getConfiguration().set(REGEX_CONFIG_NAME, args[2]);
-		
+
 		job.setJarByClass(MovieGrepDistributedCache.class);
 		
     	job.setMapperClass(MovieMapper.class);
@@ -95,7 +95,7 @@ public class MovieGrepDistributedCache extends Configured implements Tool {
 		public void map(Object key, Text value, Context context) 
 				throws IOException, InterruptedException {
 			String line = value.toString();
-			
+
 			String[] tokens = line.toString().split("\\t");
 			if (tokens.length == 3) {
 				Matcher matcher = regexPattern.matcher(line);

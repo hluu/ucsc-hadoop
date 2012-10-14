@@ -52,3 +52,8 @@ hadoop ucsc.hadoop.mapreduce.movie.MovieGrepDistributedCache -files ./data/movie
 
 # print second column and use tab delimiter
 awk -Ft '{print $2}' < ~/tmp/2012-movie.txt
+
+
+# **************** first pig script *************
+pig -x local  -f ./src/script/pig-active-actors.pi
+pig -x local  -f ./src/script/pig-movie-weight-join.pi
