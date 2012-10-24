@@ -1,0 +1,16 @@
+#!/bin/sh
+
+export HIVE_INSTALL=/Users/hluu/dev/opensource/hive-0.9.0
+echo "HIVE_INSTALL: $HIVE_INSTALL"
+
+export PATH=$PATH:$HIVE_INSTALL/bin
+
+-- create hive movies table
+hive -e "CREATE EXTERNAL TABLE movies (actor STRING, movie STRING, year INT) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' LOCATION '/Users/hluu/dev/ucsc/workspace_hadoop_class/hadoop-class-example/data/movie'"
+
+-- create hive table and partition by year
+hive -e "CREATE EXTERNAL TABLE movies (actor STRING, movie STRING) PARTITIONED BY (year INT) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' LOCATION '/Users/hluu/dev/ucsc/workspace_hadoop_class/hadoop-class-example/data/movie'"
+
+hive
+> show tables;
+> select count(*) from movies;	

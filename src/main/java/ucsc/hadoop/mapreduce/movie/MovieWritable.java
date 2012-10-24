@@ -56,11 +56,9 @@ public class MovieWritable implements WritableComparable<MovieWritable> {
 	public int compareTo(MovieWritable o) {
 		int yearResult = year.compareTo(o.year);
 
-		//System.out.println("w1: " + toString() + " w2: " + o.toString());
 		if (yearResult != 0) {
 			return yearResult;
 		}
-
 		return title.compareTo(o.title);
 	}
 	
