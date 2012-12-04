@@ -12,7 +12,8 @@ movies_weights_limit = LIMIT movies_weights_sorted 10;
 movies = load './data/movie/imdb.tsv' using PigStorage('\t') 
          as (actor:chararray, movie:chararray, year:int);
 
-movies_weights_join = JOIN movies_weights_limit by (movie, year) LEFT OUTER, movies BY (movie, year); 
+movies_weights_join = JOIN movies_weights_limit by (movie, year) LEFT OUTER, 
+                           movies BY (movie, year); 
 
 movies_weights_actor = FOREACH movies_weights_join GENERATE
                             movies_weights_limit::movie,

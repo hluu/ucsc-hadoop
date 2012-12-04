@@ -1,4 +1,4 @@
-movies = load './data/movie/imdb.tsv' using PigStorage() 
+movies = load '/Users/hluu/dev/ucsc/workspace_hadoop_class/hadoop-class-example/data/movie/imdb.tsv' using PigStorage() 
          as (actor:chararray, movie:chararray, year:int);
          
 movies_group = GROUP movies by actor;

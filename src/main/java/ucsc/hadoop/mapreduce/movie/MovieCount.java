@@ -1,8 +1,6 @@
 package ucsc.hadoop.mapreduce.movie;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,7 +47,7 @@ public class MovieCount extends Configured implements Tool {
 		job.setReducerClass(MovieYearReducer.class);
 
 		job.setMapOutputKeyClass(IntWritable.class);
-		job.setMapOutputValueClass(Text.class);
+		job.setMapOutputValueClass(IntWritable.class);
 		
 		job.setOutputKeyClass(IntWritable.class);
 		job.setOutputValueClass(IntWritable.class);
@@ -66,9 +64,9 @@ public class MovieCount extends Configured implements Tool {
 		System.exit(exitCode);
 	}
 	
-	public static class MovieTokenizerMapper extends Mapper<Object, Text, IntWritable, Text> {
+	public static class MovieTokenizerMapper extends Mapper<Object, Text, IntWritable, IntWritable> {
+		private final static IntWritable ONE = new IntWritable(1);
 		private final static IntWritable YEAR = new IntWritable();
-		private final static Text MOVIE = new Text();
 		
 		@Override
 		public void map(Object key, Text value, Context context) 
@@ -78,27 +76,24 @@ public class MovieCount extends Configured implements Tool {
 			if (tokens.length == 3) {
 				int year = Integer.parseInt(tokens[2]);
 				YEAR.set(year);
-				MOVIE.set(tokens[1]);
-				context.write(YEAR, MOVIE);
+				context.write(YEAR, ONE);
 			}
-			
 		}
 	}
 	
-	public static class MovieYearReducer extends Reducer<IntWritable, Text, IntWritable, IntWritable> {
+	public static class MovieYearReducer extends Reducer<IntWritable, IntWritable, IntWritable, IntWritable> {
 		private IntWritable result = new IntWritable();
 		
 		@Override
-		public void reduce(IntWritable year, Iterable<Text> values, Context context) 
+		public void reduce(IntWritable year, Iterable<IntWritable> values, Context context) 
 				 throws IOException, InterruptedException {
 				
-			Set<String> movieSet = new HashSet<String>();
-			for (Text movie : values) {
-				movieSet.add(movie.toString());
+			int movieCountPerYear = 0;
+			for (IntWritable count : values) {
+				movieCountPerYear += count.get();
 			}
-			result.set(movieSet.size());
+			result.set(movieCountPerYear);
 			context.write(year, result);
-			movieSet.clear();
 		}
 	}
 	
