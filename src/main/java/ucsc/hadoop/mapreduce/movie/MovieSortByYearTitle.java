@@ -21,7 +21,8 @@ import org.apache.hadoop.util.ToolRunner;
 import ucsc.hadoop.mapreduce.util.ConfigurationUtil;
 
 /**
- * Demonstrating sorting movies by year and then by title within each year
+ * Demonstrating sorting movies by year and then by title within each year. 
+ * Secondary sort
  * 
  * @author hluu
  *
