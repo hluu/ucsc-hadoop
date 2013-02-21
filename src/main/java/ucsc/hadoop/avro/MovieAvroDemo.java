@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.apache.avro.Schema;
+import org.apache.avro.Schema.Parser;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -12,9 +13,9 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.Decoder;
+import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.Encoder;
-import org.apache.avro.io.JsonDecoder;
-import org.apache.avro.io.JsonEncoder;
+import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.util.Utf8;
 
 /**
@@ -35,14 +36,17 @@ public class MovieAvroDemo {
 		if (schemaIS == null) {
 			throw new IllegalStateException("Unable to find " + MOVIE_AVRO_SCHEMA);
 		}
-		Schema movieSchema = Schema.parse(schemaIS);
+		
+		//Schema.Parser
+		Schema movieSchema = new Parser().parse(schemaIS); //Schema.parse(schemaIS);
 		String avroData = writeAvro(movieSchema);
 		readAvro(movieSchema, avroData);
 	}
 	
 	private static void readAvro(Schema movieSchema, String avroData) throws IOException {
 		DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>(movieSchema);
-		Decoder decoder = new JsonDecoder(movieSchema, avroData);
+		Decoder decoder = DecoderFactory.get().jsonDecoder(movieSchema, avroData);
+		//Decoder decoder = new JsonDecoder(movieSchema, avroData);
 		
 		GenericRecord record = reader.read(null, decoder);
 		
@@ -62,7 +66,8 @@ public class MovieAvroDemo {
 		
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(movieSchema);
-		Encoder encoder = new JsonEncoder(movieSchema, bos);
+		Encoder encoder = EncoderFactory.get().jsonEncoder(movieSchema, bos);
+		//Encoder encoder = new JsonEncoder(movieSchema, bos);
 		//Encoder encoder = new BinaryEncoder(bos);
 		writer.write(record, encoder);
 		encoder.flush();

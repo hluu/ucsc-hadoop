@@ -31,12 +31,13 @@ public class MovieCount extends Configured implements Tool {
 	private static final Log LOG = LogFactory.getLog(MovieCount.class);
 	
 	public int run(String[] args) throws Exception {
-		Configuration conf = getConf();
+		
 		if (args.length != 2) {
 			System.err.println("Usage: moviecount <in> <out>");
 			System.exit(2);
 		}
 		
+		Configuration conf = getConf();
 		ConfigurationUtil.dumpConfigurations(conf, System.out);
 		
 		LOG.info("input: " + args[0] + " output: " + args[1]);

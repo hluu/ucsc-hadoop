@@ -1,0 +1,6 @@
+Instructions
+--------------------
+* had to copy avro-1.7.2.jar and avro-mapred-1.7.2.jar to HADOOP_HOME/lib
+* had to copy paranamer-2.3.jar to HADOOP_HOME/lib
+
+* for some reason -libjars didn't work

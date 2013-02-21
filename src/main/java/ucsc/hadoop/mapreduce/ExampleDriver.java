@@ -20,6 +20,7 @@ package ucsc.hadoop.mapreduce;
 
 import org.apache.hadoop.util.ProgramDriver;
 
+import ucsc.hadoop.mapreduce.algorithm.MovieBloomFilter;
 import ucsc.hadoop.mapreduce.apache.Grep;
 import ucsc.hadoop.mapreduce.apache.WordCount;
 import ucsc.hadoop.mapreduce.apache.WordCount2;
@@ -27,7 +28,6 @@ import ucsc.hadoop.mapreduce.movie.MovieCount;
 import ucsc.hadoop.mapreduce.movie.MovieCountWithCombiner;
 import ucsc.hadoop.mapreduce.movie.MovieCountWithCounter;
 import ucsc.hadoop.mapreduce.movie.MovieCountWithLimit;
-import ucsc.hadoop.mapreduce.text.Search;
 import ucsc.hadoop.mapreduce.weather.MaxTemperature;
 
 /**
@@ -40,8 +40,8 @@ public class ExampleDriver {
     int exitCode = -1;
     ProgramDriver pgd = new ProgramDriver();
     try {
-      /**pgd.addClass("search", Search.class, 
-                "Simple search map/reduce application"); **/
+      pgd.addClass("bloomfilter", MovieBloomFilter.class, 
+                "A map/reduce application that creates a bloom filter"); 
       pgd.addClass("moviecount", MovieCount.class, 
                 "A map/reduce program that counts # of movies for each year");
       pgd.addClass("moviecountcombiner", MovieCountWithCombiner.class, 
