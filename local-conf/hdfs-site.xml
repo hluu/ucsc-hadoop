@@ -7,14 +7,14 @@
 
 	<property>
 		<name>dfs.name.dir</name>
-		<value>[change this]/tmp/hdfs/name</value>
+		<value>/tmp/hdfs/name</value>
 		<description>Determines where on the local filesystem the DFS name
 			node should store the name table(fsimage).</description>
 	</property>
 
 	<property>
 		<name>dfs.data.dir</name>
-		<value>/[change this]/tmp/hdfs/data</value>
+		<value>/tmp/hdfs/data</value>
 		<description>Determines where on the local filesystem an DFS data node should store its blocks.</description>
 	</property>
 	
