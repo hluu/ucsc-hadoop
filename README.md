@@ -1,4 +1,4 @@
 ucsc-hadoop
 ===========
 
-Sample codes for student of Hadoop course
+Sample codes for students of Hadoop course
