@@ -8,15 +8,21 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mrunit.mapreduce.MapDriver;
 import org.apache.hadoop.mrunit.mapreduce.ReduceDriver;
+import org.apache.log4j.Logger;
 import org.junit.Test;
 
 public class MovieCountTest {
+	
+	private static final Logger LOGGER = Logger.getLogger(MovieCountTest.class);
+	
 	@Test
-	public void mapperTest() {
+	public void mapperTest() throws Exception {
+		LOGGER.info("..... inside mapper test");
+		
 		MapDriver<Object, Text, IntWritable, IntWritable> mapDriver = new MapDriver<Object, Text, IntWritable, IntWritable>();
 		
 		mapDriver.withMapper(new MovieCount.MovieTokenizerMapper())
-		.withInput(new Integer(10), new Text("Cooper, Chris (I)	Seabiscuit	2003"))
+		.withInput(new IntWritable(10), new Text("Cooper, Chris (I)	Seabiscuit	2003"))
 		.withOutput(new IntWritable(2003), new IntWritable(1))
 		.runTest();
 			
@@ -24,7 +30,7 @@ public class MovieCountTest {
 	}
 	
 	@Test
-	public void reducerTest() {
+	public void reducerTest() throws Exception {
 		ReduceDriver<IntWritable, IntWritable, IntWritable, IntWritable> reduceDriver =
 					new ReduceDriver<IntWritable, IntWritable, IntWritable, IntWritable>();
 		

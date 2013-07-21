@@ -88,7 +88,7 @@ public class MovieSort extends Configured implements Tool {
 			String[] tokens = value.toString().split("\\t");
 			
 			if (tokens.length == 3) {
-				int year = Integer.parseInt(tokens[1]);
+				int year = Integer.parseInt(tokens[2]);
 				YEAR.set(year);
 				MOVIE.set(tokens[0]);
 				context.write(YEAR, MOVIE);
@@ -107,7 +107,7 @@ public class MovieSort extends Configured implements Tool {
 			String[] tokens = value.toString().split("\\t");
 			
 			if (tokens.length == 3) {
-				int year = Integer.parseInt(tokens[1]);
+				int year = Integer.parseInt(tokens[2]);
 				YEAR.set(year);
 				MOVIE.set(tokens[0]);
 				context.write(MOVIE, YEAR);

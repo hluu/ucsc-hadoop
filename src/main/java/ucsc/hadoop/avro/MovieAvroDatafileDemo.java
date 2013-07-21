@@ -33,7 +33,8 @@ public class MovieAvroDatafileDemo {
 		if (schemaIS == null) {
 			throw new IllegalStateException("Unable to find " + MOVIE_AVRO_SCHEMA);
 		}
-		Schema movieSchema = Schema.parse(schemaIS);
+		Schema.Parser parser = new Schema.Parser();
+		Schema movieSchema = parser.parse(schemaIS);//Schema.parse(schemaIS);
 		
 		File dataFile =  new File("/tmp/imbdb.avro");
 		if (dataFile.exists()) {
