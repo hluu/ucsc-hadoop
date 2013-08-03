@@ -38,7 +38,7 @@ public class IMDBSequenceData {
 		}
 		
 		if ("convert".equals(command)) {
-			File outputFile = new File(args[1]);
+			File outputFile = new File(args[2]);
 			if (outputFile.exists()) {
 				outputFile.delete();
 			}
