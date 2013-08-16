@@ -92,7 +92,7 @@ public class IMDBMovieWeightAvroUtility {
 
 	private static void writeAvro(File inputFile, File outputFile) throws IOException {
 		
-		InputStream schemaIS = MovieAvroDemo.class.getResourceAsStream(MovieSchemaConstant.MOVIE_WEIGHT_AVRO_SCHEMA);
+		InputStream schemaIS = IMDBMovieWeightAvroUtility.class.getResourceAsStream(MovieSchemaConstant.MOVIE_WEIGHT_AVRO_SCHEMA);
 		if (schemaIS == null) {
 			throw new IllegalStateException("Unable to find " + MovieSchemaConstant.MOVIE_WEIGHT_AVRO_SCHEMA);
 		}

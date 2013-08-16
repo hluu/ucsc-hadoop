@@ -12,8 +12,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.SequenceFile.Metadata;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -62,6 +63,13 @@ public class IMDBSequenceData {
 			Writable key = (Writable)ReflectionUtils.newInstance(reader.getKeyClass(), conf);
 			Writable value = (Writable)ReflectionUtils.newInstance(reader.getValueClass(), conf);
 			
+			Metadata metadata = reader.getMetadata();
+			System.out.printf("Iscompressed %b, block compressed: %b, compression codec: %s\n", reader.getCompressionCodec(),
+					reader.isCompressed(), reader.isBlockCompressed());
+			System.out.printf("key class name: %s, value class name: %s\n",reader.getKeyClassName(),
+					reader.getValueClassName());
+			
+			System.out.println("sequence metadata: " + metadata.toString());
 			long position = reader.getPosition();
 			int count = 0;
 			while (reader.next(key, value)) {

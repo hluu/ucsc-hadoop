@@ -92,7 +92,7 @@ public class IMDBMovieAvroUtility {
 
 	private static void writeAvro(File inputFile, File outputFile) throws IOException {
 		
-		InputStream schemaIS = MovieAvroDemo.class.getResourceAsStream(MovieSchemaConstant.MOVIE_AVRO_SCHEMA);
+		InputStream schemaIS = IMDBMovieAvroUtility.class.getResourceAsStream(MovieSchemaConstant.MOVIE_AVRO_SCHEMA);
 		if (schemaIS == null) {
 			throw new IllegalStateException("Unable to find " + MovieSchemaConstant.MOVIE_AVRO_SCHEMA);
 		}

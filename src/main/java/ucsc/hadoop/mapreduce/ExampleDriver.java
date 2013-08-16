@@ -24,10 +24,12 @@ import ucsc.hadoop.mapreduce.algorithm.MovieBloomFilter;
 import ucsc.hadoop.mapreduce.apache.Grep;
 import ucsc.hadoop.mapreduce.apache.WordCount;
 import ucsc.hadoop.mapreduce.apache.WordCount2;
+import ucsc.hadoop.mapreduce.avro.MovieAvroCount;
 import ucsc.hadoop.mapreduce.movie.MovieCount;
 import ucsc.hadoop.mapreduce.movie.MovieCountWithCombiner;
 import ucsc.hadoop.mapreduce.movie.MovieCountWithCounter;
 import ucsc.hadoop.mapreduce.movie.MovieCountWithLimit;
+import ucsc.hadoop.mapreduce.sequence.MovieSequenceCount;
 import ucsc.hadoop.mapreduce.weather.MaxTemperature;
 
 /**
@@ -60,33 +62,14 @@ public class ExampleDriver {
       pgd.addClass("grep", Grep.class, 
               "A map/reduce program that counts the matches of a regex in the input.");
       
-    /*  pgd.addClass("aggregatewordcount", AggregateWordCount.class, 
-                   "An Aggregate based map/reduce program that counts the words in the input files.");
-      pgd.addClass("aggregatewordhist", AggregateWordHistogram.class, 
-                   "An Aggregate based map/reduce program that computes the histogram of the words in the input files.");
-      pgd.addClass("grep", Grep.class, 
-                   "A map/reduce program that counts the matches of a regex in the input.");
-      pgd.addClass("randomwriter", RandomWriter.class, 
-                   "A map/reduce program that writes 10GB of random data per node.");
-      pgd.addClass("randomtextwriter", RandomTextWriter.class, 
-      "A map/reduce program that writes 10GB of random textual data per node.");
-      pgd.addClass("sort", Sort.class, "A map/reduce program that sorts the data written by the random writer.");
-
-      pgd.addClass("pi", QuasiMonteCarlo.class, QuasiMonteCarlo.DESCRIPTION);
-      pgd.addClass("bbp", BaileyBorweinPlouffe.class, BaileyBorweinPlouffe.DESCRIPTION);
-      pgd.addClass("distbbp", DistBbp.class, DistBbp.DESCRIPTION);
-
-      pgd.addClass("pentomino", DistributedPentomino.class,
-      "A map/reduce tile laying program to find solutions to pentomino problems.");
-      pgd.addClass("secondarysort", SecondarySort.class,
-                   "An example defining a secondary sort to the reduce.");
-      pgd.addClass("sudoku", Sudoku.class, "A sudoku solver.");
-      pgd.addClass("join", Join.class, "A job that effects a join over sorted, equally partitioned datasets");
-      pgd.addClass("multifilewc", MultiFileWordCount.class, "A job that counts words from several files.");
-      pgd.addClass("dbcount", DBCountPageView.class, "An example job that count the pageview counts from a database.");
-      pgd.addClass("teragen", TeraGen.class, "Generate data for the terasort");
-      pgd.addClass("terasort", TeraSort.class, "Run the terasort");
-      pgd.addClass("teravalidate", TeraValidate.class, "Checking results of terasort");*/
+      // sequence
+      pgd.addClass("seqmoviecount", MovieSequenceCount.class, 
+              "A map/reduce example that counts # of movies from reading movie data in sequence format");
+      
+      // avro
+      pgd.addClass("avromoviecount", MovieAvroCount.class, 
+              "A map/reduce example that counts # of movies from reading movie data in Avro format");
+      
       pgd.driver(argv);
     }
     catch(Throwable e){
