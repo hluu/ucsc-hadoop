@@ -63,6 +63,8 @@ public class MovieAvroCount extends Configured implements Tool {
 		FileInputFormat.setInputPaths(job, new Path(args[0]));
 		FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
+		job.setInputFormatClass(AvroKeyInputFormat.class);
+		
 		job.setMapperClass(MovieTokenizerMapper.class);
 		job.setMapOutputKeyClass(IntWritable.class);
 		job.setMapOutputValueClass(IntWritable.class);
